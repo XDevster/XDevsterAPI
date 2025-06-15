@@ -79,67 +79,88 @@ function XDevsterAPI.Window()
         --gpu.set(10, 4, #Wname)
 end
 
-function XDevsterAPI.Loading(posX, posY, barW, barH)
-  local barWidth = #barW
-  local barHeight = #barH
-  local barX = math.floor((#posX - #barW) / 2)
-  local barY = #posY
-
-  gpu.setForeground(0x00a6ff)
-  gpu.setBackground(0x000000)
-  gpu.fill(barX, barY, barWidth, barHeight, " ")
-
-  local progress = 0
-  while progress <= barWidth do
-    gpu.setForeground(0xFFFFFF)
-    gpu.setBackground(0xFFFFFF)
-    gpu.fill(barX, barY, progress, barHeight, " ")
-    gpu.setForeground(0x000000)
+function XDevsterAPI.Loading(posX, posY, barWidth, barHeight)
+    -- Фикс параметров (убраны #) Надо было.
+    local barX = math.floor((posX - barWidth) / 2)
+    local barY = posY
+    
+    gpu.setForeground(0x00a6ff)
     gpu.setBackground(0x000000)
-    gpu.fill(barX + progress, barY, 1, barHeight, " ")
+    gpu.fill(barX, barY, barWidth, barHeight, " ")
 
-    os.sleep(0.05)
-    progress = progress + 1
-  end
+    local progress = 0
+    while progress <= barWidth do
+        gpu.setForeground(0xFFFFFF)
+        gpu.setBackground(0xFFFFFF)
+        gpu.fill(barX, barY, progress, barHeight, " ")
+        gpu.setForeground(0x000000)
+        gpu.setBackground(0x000000)
+        gpu.fill(barX + progress, barY, 1, barHeight, " ")
+
+        os.sleep(0.05)
+        progress = progress + 1
+    end
 end
 
 function XDevsterAPI.ScreenScale(SCX, SCY)
     gpu.setResolution(#SCX, #SCY)
 end
 
-function XDevsterAPI.Message(title, message, oldcolor) ----Добавил Мой Друг, А фиксил, я.... P.S: ОН ЭТО ОПЯТЬ ЧЕРЕЗ ЧАТ ГПТ ДЕЛАЛ ВОТ ГАД!
-    local width = math.max(30, #message + 10)
-    local height = 7 
-    local x = math.floor((gpu.getResolution() - width) / 2)
-    local y = math.floor((25 - height) / 2)
+function XDevsterAPI.Message(title, text) -- Подайте мне на личение бошки после того что я написал
+    local w, h = gpu.getResolution()
+    local width = math.max(#title, #text) + 12
+    local height = 7
+    local x = math.floor((w - width) / 2)
+    local y = math.floor((h - height) / 2)
     
-    gpu.setBackground(0x333333)
-    gpu.fill(x, y, width, height, " ")
-
-    local titleX = x + math.floor((width - #title) / 2)
-    local titleY = y + 1
-    local messageX = x + math.floor((width - #message) / 2)
-    local messageY = y + 3
-
+    -- ГРАДИЕНТ ПОСЛЕ КОТОРОГО Я ЧУТЛИ ЖОПУ НЕ ПОРВАЛ ТВАРЬЬЬЬЬЬЬЬ!
+    for i = 0, height-1 do
+        local ratio = i / (height-1)
+        local r = math.floor(0x99 * (1-ratio) + 0xFF * ratio)
+        local g = math.floor(0x00 * (1-ratio) + 0x00 * ratio)
+        local b = math.floor(0xCC * (1-ratio) + 0x66 * ratio)
+        local color = r * 0x10000 + g * 0x100 + b
+        gpu.setBackground(color)
+        gpu.fill(x+1, y+1+i, width, 1, " ")
+    end
+    
+    -- Это уже интерестно!
     gpu.setForeground(0xFFFFFF)
-    gpu.set(titleX, titleY, title)
-    gpu.set(messageX, messageY, message)
-
-    local buttonWidth = width - 4
-    local buttonHeight = 1
-    local buttonX = x + 2
-    local buttonY = y + height - 2
-    gpu.setBackground(0x333333) 
+    gpu.set(x+1, y+1, "╔"..string.rep("═", width-2).."╗")
+    gpu.set(x+1, y+height, "╚"..string.rep("═", width-2).."╝")
+    for i = y+2, y+height-1 do
+        gpu.set(x+1, i, "║")
+        gpu.set(x+width, i, "║")
+    end
+    
+    -- текст с тенью
+    gpu.setForeground(0x000000)
+    gpu.set(x+3 + math.floor((width - #title)/2), y+3, title)
+    gpu.setForeground(0xFF0000)
+    gpu.set(x+2 + math.floor((width - #title)/2), y+2, title)
+    
     gpu.setForeground(0xFFFFFF)
-    gpu.fill(buttonX, buttonY, buttonWidth, buttonHeight, " ") 
-    --[[
-            XDevsterAPI.DrawButton(#buttonX, #buttonY, 4, 1, OK, 0xFFFFFF, 0x333333 function()
-            --СТИРАЙСЯ ГОВНО НА ПАЛОЧКЕ ЗАДОЛБАЛ
-            --Это добавьте вы сами чтоб всё ок было
-            
-        end)   
-       ]]--
-end  
+    gpu.set(x+3 + math.floor((width - #text)/2), y+5, text)
+    gpu.setForeground(0xAAAAAA)
+    gpu.set(x+2 + math.floor((width - #text)/2), y+4, text)
+    
+    -- Кнопка "ОК"
+    gpu.setBackground(0xFF0000)
+    gpu.fill(x+math.floor(width/2)-3, y+height-1, 6, 1, " ")
+    gpu.setForeground(0xFFFFFF)
+    gpu.set(x+math.floor(width/2)-1, y+height-1, "ОК")
+    
+    -- Ожидание нажатия
+    while true do
+        local _, _, cx, cy = event.pull("touch")
+        if cy == y+height-1 and cx >= x+math.floor(width/2)-3 and cx <= x+math.floor(width/2)+3 then
+            break
+        end
+    end
+    
+    -- Восстановление экрана
+    return true
+end
 
 function XDevsterAPI.DownloadFileFromUrl(url, dist) --ХТО ТУТ ЧАТ ГПТПТПТПТ ЮЗАЛ!!!???
     local handle, data, result, reason = internet.request(url), ""
